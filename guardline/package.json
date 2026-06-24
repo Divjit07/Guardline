@@ -1,0 +1,21 @@
+{
+  "name": "guardline",
+  "version": "1.0.0",
+  "description": "24/7 Emergency WhatsApp Agent for retail loss prevention guards",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "twilio": "^5.4.0"
+  }
+}

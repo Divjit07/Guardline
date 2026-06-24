@@ -1,0 +1,4 @@
+guardline/node_modules/
+guardline/.env
+.DS_Store
+*.log
