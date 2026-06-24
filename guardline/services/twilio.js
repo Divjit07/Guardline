@@ -28,7 +28,7 @@ async function sendReply(toPhone, body) {
 async function sendDocument(toPhone, mediaUrl, caption) {
   if (!twilioClient) {
     logger.warn('Twilio not configured — would send document', { toPhone, mediaUrl });
-    return;
+    return false;
   }
   try {
     await twilioClient.messages.create({
@@ -37,8 +37,10 @@ async function sendDocument(toPhone, mediaUrl, caption) {
       mediaUrl: [mediaUrl],
       body: caption,
     });
+    return true;
   } catch (err) {
-    logger.error('sendDocument failed', { error: err.message, toPhone });
+    logger.error('sendDocument failed', { error: err.message, toPhone, mediaUrl: mediaUrl?.slice(0, 80) });
+    return false;
   }
 }
 

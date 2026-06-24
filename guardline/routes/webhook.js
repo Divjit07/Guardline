@@ -4,7 +4,7 @@ const router = express.Router();
 const { guardByPhone } = require('../storage/roster');
 const { getConversation, saveConversation } = require('../storage/conversations');
 const { saveIncident } = require('../storage/incidents');
-const { getDocument } = require('../storage/documents');
+const { getDocumentMediaUrl } = require('../storage/documents');
 const { getAIResponse } = require('../services/ai');
 const twilioService = require('../services/twilio');
 const escalation = require('../services/escalation');
@@ -45,8 +45,8 @@ router.post('/whatsapp', twilioService.validateTwilioRequest, async (req, res) =
       const keys = docRequest.document_keys || [docRequest.document_key].filter(Boolean);
       let sent = 0;
       for (const key of keys) {
-        const doc = await getDocument(key);
-        if (doc) {
+        const doc = await getDocumentMediaUrl(key);
+        if (doc?.url) {
           await twilioService.sendDocument(guardPhone, doc.url, `Here is your ${doc.label}.`);
           sent++;
         }
@@ -114,8 +114,8 @@ router.post('/whatsapp', twilioService.validateTwilioRequest, async (req, res) =
         || (aiResponse.document_key ? [aiResponse.document_key] : []);
       let sent = 0;
       for (const key of keys) {
-        const doc = await getDocument(key);
-        if (doc) {
+        const doc = await getDocumentMediaUrl(key);
+        if (doc?.url) {
           await twilioService.sendDocument(guardPhone, doc.url, `Here is your ${doc.label}.`);
           sent++;
         }

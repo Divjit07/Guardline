@@ -14,5 +14,5 @@ update documents set label = 'Break Policy', url = 'https://qhskibcubylauegomfyj
 -- Extra documents (optional — enables timesheet + docx requests)
 insert into documents (key, label, url) values
   ('timesheet', 'IGI Timesheet', 'https://qhskibcubylauegomfyj.supabase.co/storage/v1/object/public/Documents-IGI/IGI%20-%20Timesheet.pdf'),
-  ('report_template', 'Report Template', 'https://qhskibcubylauegomfyj.supabase.co/storage/v1/object/public/Documents-IGI/Document%208.docx')
+  ('report_template', 'Report Template', 'https://qhskibcubylauegomfyj.supabase.co/storage/v1/object/public/Documents-IGI/Report%20Template.docx')
 on conflict (key) do update set label = excluded.label, url = excluded.url;
