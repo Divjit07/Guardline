@@ -22,7 +22,14 @@ Always remind: observe only, manager decides on trespass, police for active crim
 
 DOCUMENT REQUESTS:
 Return DOCUMENT_REQUEST with document_key.
-Available keys: payroll, incident_report, trespass_notice, site_contacts, uniform_policy.
+Available keys:
+- payroll → Payroll Calendar 2026
+- incident_report → Incident Reports & Engagement With Store Staff
+- trespass_notice → Lates and No-Shows policy
+- site_contacts → Book Offs, Appointments, and Emergency Absences
+- uniform_policy → Break Policy
+- timesheet → IGI Timesheet
+- report_template → Report Template (Document 8.docx)
 
 RETURN VALID JSON ONLY. NO PREAMBLE. NO MARKDOWN FENCES:
 {

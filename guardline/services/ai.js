@@ -1,41 +1,77 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('./logger');
+const { GoogleGenAI } = require('@google/genai');
+const logger = require('../utils/logger');
 
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  : null;
+const MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+];
+
+function getAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  return new GoogleGenAI({ apiKey });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryable(err) {
+  const msg = err.message || '';
+  return msg.includes('429') || msg.includes('503') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('UNAVAILABLE');
+}
 
 async function getAIResponse(systemPrompt, history, userMessage) {
-  if (!genAI) {
+  const ai = getAI();
+  if (!ai) {
     logger.warn('GEMINI_API_KEY not set — AI unavailable');
     return null;
   }
 
-  try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: { temperature: 0, maxOutputTokens: 1000 },
-    });
+  const formattedHistory = history.map((msg) => ({
+    role: msg.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: msg.content }],
+  }));
 
-    const formattedHistory = history.map((msg, i) => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: i === 0 ? `${systemPrompt}\n\n${msg.content}` : msg.content }],
-    }));
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const chat = ai.chats.create({
+          model,
+          history: formattedHistory,
+          config: {
+            systemInstruction: systemPrompt,
+            temperature: 0,
+            maxOutputTokens: 2000,
+          },
+        });
 
-    const chat = model.startChat({ history: formattedHistory });
-    const result = await chat.sendMessage(userMessage);
-    let text = result.response.text().replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const result = await chat.sendMessage({ message: userMessage });
+        let text = (result.text || '').replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
-    try {
-      return JSON.parse(text);
-    } catch {
-      logger.warn('AI returned non-JSON response', { text: text.slice(0, 200) });
-      return null;
+        try {
+          logger.info('AI response ok', { model });
+          return JSON.parse(text);
+        } catch {
+          logger.warn('AI returned non-JSON response', { model, text: text.slice(0, 200) });
+          return null;
+        }
+      } catch (err) {
+        if (isRetryable(err) && attempt === 0) {
+          logger.warn('AI retryable error, waiting 3s', { model });
+          await sleep(3000);
+          continue;
+        }
+        logger.warn('AI call failed', { model, error: err.message.slice(0, 120) });
+        break;
+      }
     }
-  } catch (err) {
-    logger.error('AI call failed', { error: err.message });
-    return null;
   }
+
+  logger.error('All AI models failed');
+  return null;
 }
 
 module.exports = { getAIResponse };

@@ -11,6 +11,7 @@ const escalation = require('../services/escalation');
 const { triggerShiftFill } = require('../services/coverageService');
 const systemPrompt = require('../prompts/systemPrompt');
 const { checkKeywordOverride } = require('../utils/keywordOverride');
+const { checkDocumentRequest } = require('../utils/documentMatcher');
 const { checkRateLimit } = require('../utils/rateLimiter');
 const { normalizePhone } = require('../utils/phoneUtils');
 const { generateIncidentId, buildEscalationMessage } = require('../utils/reportBuilder');
@@ -25,6 +26,8 @@ router.post('/whatsapp', twilioService.validateTwilioRequest, async (req, res) =
       return res.status(200).send('<Response></Response>');
     }
 
+    logger.info('Incoming WhatsApp message', { guardPhone, preview: userMessage.slice(0, 80) });
+
     const rateCheck = checkRateLimit(guardPhone);
     if (!rateCheck.allowed) {
       await twilioService.sendReply(guardPhone, 'You have reached the message limit. Please wait before sending more messages.');
@@ -35,6 +38,24 @@ router.post('/whatsapp', twilioService.validateTwilioRequest, async (req, res) =
     const conversation = await getConversation(guardPhone);
     const history = conversation.history || [];
     const site = conversation.site || guard.default_site || guard.site || null;
+
+    // Document requests — keyword match, no AI needed
+    const docRequest = checkDocumentRequest(userMessage);
+    if (docRequest) {
+      const keys = docRequest.document_keys || [docRequest.document_key].filter(Boolean);
+      let sent = 0;
+      for (const key of keys) {
+        const doc = await getDocument(key);
+        if (doc) {
+          await twilioService.sendDocument(guardPhone, doc.url, `Here is your ${doc.label}.`);
+          sent++;
+        }
+      }
+      if (!sent) {
+        await twilioService.sendReply(guardPhone, 'I do not have that document. Ask your supervisor to add it.');
+      }
+      return res.status(200).send('<Response></Response>');
+    }
 
     // Keyword override runs BEFORE AI
     const override = checkKeywordOverride(userMessage);
@@ -70,12 +91,19 @@ router.post('/whatsapp', twilioService.validateTwilioRequest, async (req, res) =
       }
     }
 
-    // Document request — send PDF and exit early
+    // Document request from AI — supports single or multiple keys
     if (aiResponse.intent === 'DOCUMENT_REQUEST') {
-      const doc = await getDocument(aiResponse.document_key);
-      if (doc) {
-        await twilioService.sendDocument(guardPhone, doc.url, `Here is your ${doc.label}.`);
-      } else {
+      const keys = aiResponse.document_keys
+        || (aiResponse.document_key ? [aiResponse.document_key] : []);
+      let sent = 0;
+      for (const key of keys) {
+        const doc = await getDocument(key);
+        if (doc) {
+          await twilioService.sendDocument(guardPhone, doc.url, `Here is your ${doc.label}.`);
+          sent++;
+        }
+      }
+      if (!sent) {
         await twilioService.sendReply(guardPhone, 'I do not have that document. Ask your supervisor to add it.');
       }
       return res.status(200).send('<Response></Response>');
