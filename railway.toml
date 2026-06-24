@@ -1,0 +1,7 @@
+[build]
+builder = "RAILPACK"
+
+[deploy]
+rootDirectory = "guardline"
+startCommand = "npm start"
+restartPolicyType = "ON_FAILURE"
