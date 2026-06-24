@@ -75,6 +75,23 @@ router.post('/whatsapp', twilioService.validateTwilioRequest, async (req, res) =
     }
 
     if (!aiResponse) {
+      const docFallback = checkDocumentRequest(userMessage);
+      if (docFallback) {
+        const keys = docFallback.document_keys || [];
+        let sent = 0;
+        for (const key of keys) {
+          const doc = await getDocument(key);
+          if (doc) {
+            await twilioService.sendDocument(guardPhone, doc.url, `Here is your ${doc.label}.`);
+            sent++;
+          }
+        }
+        if (!sent) {
+          await twilioService.sendReply(guardPhone, 'I do not have that document. Ask your supervisor to add it.');
+        }
+        return res.status(200).send('<Response></Response>');
+      }
+
       const fallback = checkKeywordOverride(userMessage);
       if (fallback) {
         aiResponse = {

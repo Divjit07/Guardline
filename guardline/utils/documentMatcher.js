@@ -10,10 +10,7 @@ const DOCUMENT_TRIGGERS = [
 
 function checkDocumentRequest(message) {
   const msg = message.toLowerCase();
-  const sendIntent = /send me|send the|need the|get me|can you send|share the|want the|give me/.test(msg)
-    || msg.includes('pdf')
-    || msg.includes('.docx')
-    || msg.includes('template');
+  const sendIntent = /send|pdf|docx|template|document|payroll|timesheet|report form/.test(msg);
 
   if (!sendIntent) return null;
 

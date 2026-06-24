@@ -5,7 +5,7 @@ router.get('/', (req, res) => {
   res.json({
     status: 'ok',
     uptime: process.uptime(),
-    version: '3.1.0',
+    version: '3.1.1',
     timestamp: new Date().toISOString(),
   });
 });
